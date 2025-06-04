@@ -1,5 +1,5 @@
 # AntiWS
-Highly configuarable and modular Anti W+S system for Roblox games
+Highly configurable and modular Anti W+S system for Roblox games
 
 documentation is still a heavy WIP (in the script editor stuff is documented but I want to make a page here with documentation and examples) along with the readme but you can grab the rbxl thats in this repository to use as a example
 
