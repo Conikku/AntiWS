@@ -1,7 +1,7 @@
 # AntiWS
 Highly configuarable and modular Anti W+S system for Roblox games
 
-Documentaion is still a heavy WIP (along with read me) but you can grab the rbxl thats in this repsository to use as a example
+documentation is still a heavy WIP (in the script editor stuff is documented but I want to make a page here with documentation and examples) along with the readme but you can grab the rbxl thats in this repository to use as a example
 
 # ⚠️WARNING⚠️
 If you plan on adding a option to let people disable friends of theirs from being punished, make the setting name be called something like "Friends Respect Boundries" and not "Friends Can W+S"
