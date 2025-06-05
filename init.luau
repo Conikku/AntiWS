@@ -34,7 +34,7 @@ AntiWSSystem.__index = AntiWSSystem
 --- @field oscillationThreshold number -- How many direction changes needed to trigger punishment (default: 5)
 --- @field checkInterval number -- How often to check positions (default: 0.1 seconds)
 --- @field respectFriends boolean -- Whether to ignore friends (default: true)
---- @field defaultPunishment string -- Default punishment type (default: "explode")
+--- @field defaultPunishment string -- Default punishment type (default: "push")
 --- @field punishmentCooldown number -- Cooldown between punishments (default: 5 seconds)
 --- @field debugMode boolean -- Whether to show debug messages (default: false)
 --- @field includeNPCs boolean -- Whether to protect NPCs from W+S behavior (default: false)
@@ -43,6 +43,7 @@ AntiWSSystem.__index = AntiWSSystem
 --- @field npcFolderNames table -- Array of folder names containing NPCs (default: {"NPCs"})
 --- @field npcTags table -- Array of CollectionService tags for NPCs (default: {"NPC"})
 --- @field explosionForce number -- Force applied during fake explosion (default: 50)
+--- @field freezeDuration number -- Duration for how long it takes for the frozen player to thaw (default: 5)
 -- Default configuration
 local DEFAULT_CONFIG = {
 	enabled = true,
@@ -50,7 +51,7 @@ local DEFAULT_CONFIG = {
 	oscillationThreshold = 5,
 	checkInterval = 0.1,
 	respectFriends = true,  -- Default to respecting friends
-	defaultPunishment = "explode",
+	defaultPunishment = "push",
 	punishmentCooldown = 5,
 	debugMode = false,
 	includeNPCs = false,
@@ -59,6 +60,7 @@ local DEFAULT_CONFIG = {
 	npcFolderNames = {"NPCs"},
 	npcTags = {"NPC"},
 	explosionForce = 50,
+	freezeDuration = 5,
 }
 
 --- Creates a new Anti-W+S System instance
@@ -397,7 +399,14 @@ function AntiWSSystem:punishPlayer(offender, victim, targetType)
 		self:teleportPlayer(offender)
 	elseif punishmentType == "fling" then
 		self:flingPlayer(offender)
-		-- Custom punishment handler
+	elseif punishmentType == "freeze" then
+		self:freezePlayer(offender)
+	elseif punishmentType == "sit" then
+		self:sitPlayer(offender)
+	elseif punishmentType == "trip" then
+		self:tripPlayer(offender)
+	elseif punishmentType == "push" then
+		self:pushPlayer(offender)
 	else
 		-- Check if it's a registered custom punishment
 		if self.customPunishments[punishmentType] then
@@ -423,6 +432,158 @@ function AntiWSSystem:punishPlayer(offender, victim, targetType)
 end
 
 -- Built-in punishment methods
+--- Forces the player to sit down
+--- @param player Player -- The player to punish
+function AntiWSSystem:sitPlayer(player)
+	if not player.Character then return end
+	local humanoid = player.Character:FindFirstChildOfClass("Humanoid")
+	if not humanoid then return end
+
+	-- Force sit
+	humanoid.Sit = true
+
+	if self.config.debugMode then
+		print(player.Name .. " punished with sit")
+	end
+end
+
+--- Trips the player making them fall over
+--- @param player Player -- The player to punish
+function AntiWSSystem:tripPlayer(player)
+	if not player.Character then return end
+	local humanoid = player.Character:FindFirstChildOfClass("Humanoid")
+	local rootPart = player.Character:FindFirstChild("HumanoidRootPart")
+	if not humanoid or not rootPart then return end
+
+	-- Make player fall over
+	humanoid.PlatformStand = true
+
+	-- Apply rotational velocity to make them flip
+	local angularVelocity = Instance.new("BodyAngularVelocity")
+	angularVelocity.AngularVelocity = Vector3.new(0, 15, 0)
+	angularVelocity.MaxTorque = Vector3.new(0, 4000, 0)
+	angularVelocity.P = 1000
+	angularVelocity.Parent = rootPart
+
+	-- Clean up after delay
+	task.delay(3, function()
+		if angularVelocity and angularVelocity.Parent then
+			angularVelocity:Destroy()
+		end
+		if humanoid and humanoid.Parent then
+			humanoid.PlatformStand = false
+		end
+	end)
+
+	if self.config.debugMode then
+		print(player.Name .. " punished with trip")
+	end
+end
+
+--- Pushes the player away from their victim
+--- @param player Player -- The player to punish
+--- @param victim table -- Victim data table from detection
+function AntiWSSystem:pushPlayer(player, victim)
+	if not player.Character then return end
+	local rootPart = player.Character:FindFirstChild("HumanoidRootPart")
+	if not rootPart then return end
+
+	local pushDirection
+	if victim and victim.victim then
+		-- Push away from victim
+		local victimPos = victim.victim:IsA("Player") and victim.victim.Character.HumanoidRootPart.Position
+			or victim.victim:FindFirstChild("HumanoidRootPart") and victim.victim.HumanoidRootPart.Position
+
+		if victimPos then
+			pushDirection = (rootPart.Position - victimPos).Unit
+		end
+	end
+
+	-- Default push backward if no victim found
+	pushDirection = pushDirection or -rootPart.CFrame.LookVector
+
+	-- Apply push force
+	local bodyVelocity = Instance.new("BodyVelocity")
+	bodyVelocity.Velocity = pushDirection * 245
+	bodyVelocity.MaxForce = Vector3.new(10000, 0, 10000)
+	bodyVelocity.P = 5000
+	bodyVelocity.Parent = rootPart
+
+	-- Clean up after delay
+	task.delay(0.5, function()
+		if bodyVelocity and bodyVelocity.Parent then
+			bodyVelocity:Destroy()
+		end
+	end)
+
+	if self.config.debugMode then
+		print(player.Name .. " punished with push")
+	end
+end
+
+--- Freezes the player in an ice block
+--- @param player Player -- The player to punish
+function AntiWSSystem:freezePlayer(player)
+	if not player.Character then return end
+	local character = player.Character
+	local rootPart = character:FindFirstChild("HumanoidRootPart")
+	if not rootPart then return end
+
+	-- Anchor all parts
+	for _, part in ipairs(character:GetDescendants()) do
+		if part:IsA("BasePart") then
+			part.Anchored = true
+		end
+	end
+
+	-- Create ice block
+	local ice = Instance.new("Part")
+	ice.Name = "FreezePrison"
+	ice.Size = Vector3.new(5, 7, 5)
+	ice.CFrame = rootPart.CFrame * CFrame.new(0, -1, 0)
+	ice.Anchored = true
+	ice.CanCollide = false
+	ice.Transparency = 0.7
+	ice.Material = Enum.Material.Ice
+	ice.Color = Color3.fromRGB(170, 255, 255)
+	ice.Parent = workspace
+	
+	local sound = Instance.new("Sound")
+	sound.SoundId = "rbxassetid://632831227"
+	sound.Parent = rootPart
+	task.wait()
+	sound:Play()
+	
+	game.Debris:AddItem(sound, sound.TimeLength)
+
+	-- Create melting effect
+	local meltTween = game:GetService("TweenService"):Create(
+		ice,
+		TweenInfo.new(self.config.freezeDuration or 5, Enum.EasingStyle.Linear),
+		{Transparency = 1}
+	)
+	meltTween:Play()
+
+	-- Clean up after delay
+	task.delay(self.config.freezeDuration or 5, function()
+		-- Unanchor player parts
+		for _, part in ipairs(character:GetDescendants()) do
+			if part:IsA("BasePart") then
+				part.Anchored = false
+			end
+		end
+
+		-- Remove ice block
+		if ice and ice.Parent then
+			ice:Destroy()
+		end
+	end)
+
+	if self.config.debugMode then
+		print(player.Name .. " punished with freeze")
+	end
+end
+
 --- Creates a safe explosion effect that only launches the offending player
 --- @param player Player -- The player to "explode"
 function AntiWSSystem:explodePlayer(player)
