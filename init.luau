@@ -221,7 +221,7 @@ function AntiWSSystem:detectWSBehavior()
 		end
 
 		-- Calculate movement vector and direction
-		local movementVector = currentPosition - state.lastPosition
+		local movementVector = (currentPosition - state.lastPosition) * Vector3.new(1, 0, 1)
 		local movementDistance = movementVector.Magnitude
 
 		-- Only track if player is moving
