@@ -286,7 +286,7 @@ function AntiWSSystem:detectWSBehavior()
 					local victim = self:raycastForVictim(player)
 					if victim then
 						if self.config.debugMode then
-							print(player.Name .. " detected W+S pattern with victim: " .. victim.Name)
+							print(player.Name .. " detected W+S pattern with victim: " .. victim.victim.Name)
 						end
 
 						-- Check if player is on cooldown
@@ -376,12 +376,9 @@ end
 function AntiWSSystem:punishPlayer(offender, victim, targetType)
 	-- Ensure victimName is always a valid string
 	local victimName = "Unknown"
-	if victim then
-		if targetType == "npc" then
-			victimName = victim.Name or "NPC"
-		else
-			victimName = victim.Name or "Player"
-		end
+	local victimName = "Unknown"
+	if victim and victim.victim then
+		victimName = victim.victim.Name
 	end
 
 	if self.config.debugMode then
