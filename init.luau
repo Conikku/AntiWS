@@ -309,7 +309,7 @@ function AntiWSSystem:raycastForVictim(player)
 
 	-- Cast ray forward
 	local raycastParams = RaycastParams.new()
-	raycastParams.FilterType = Enum.RaycastFilterType.Blacklist
+	raycastParams.FilterType = Enum.RaycastFilterType.Exclude
 	raycastParams.FilterDescendantsInstances = {player.Character}
 	raycastParams.IgnoreWater = true
 
