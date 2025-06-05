@@ -38,11 +38,11 @@ AntiWSSystem.__index = AntiWSSystem
 --- @field punishmentCooldown number -- Cooldown between punishments (default: 5 seconds)
 --- @field debugMode boolean -- Whether to show debug messages (default: false)
 --- @field includeNPCs boolean -- Whether to protect NPCs from W+S behavior (default: false)
+--- @field jumpingIncluded boolean -- Considers player jumping while doing it, recommended to keep it as false due to high chance of false positives (default: false)
 --- @field npcIdentifier string -- How to identify NPCs - "folder", "tag", or "custom" (default: "folder")
 --- @field npcFolderNames table -- Array of folder names containing NPCs (default: {"NPCs"})
 --- @field npcTags table -- Array of CollectionService tags for NPCs (default: {"NPC"})
 --- @field explosionForce number -- Force applied during fake explosion (default: 50)
-
 -- Default configuration
 local DEFAULT_CONFIG = {
 	enabled = true,
@@ -54,6 +54,7 @@ local DEFAULT_CONFIG = {
 	punishmentCooldown = 5,
 	debugMode = false,
 	includeNPCs = false,
+	jumpingIncluded = false,
 	npcIdentifier = "folder",
 	npcFolderNames = {"NPCs"},
 	npcTags = {"NPC"},
@@ -221,7 +222,12 @@ function AntiWSSystem:detectWSBehavior()
 		end
 
 		-- Calculate movement vector and direction
-		local movementVector = (currentPosition - state.lastPosition) * Vector3.new(1, 0, 1)
+		local movementVector = (currentPosition - state.lastPosition)
+		
+		if self.config.jumpingIncluded then
+			movementVector = movementVector * Vector3.new(1, 0, 1)
+		end
+		
 		local movementDistance = movementVector.Magnitude
 
 		-- Only track if player is moving
